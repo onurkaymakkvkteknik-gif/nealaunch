@@ -1,16 +1,43 @@
 name: CI
-on: [push, pull_request]
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
 
 jobs:
-  integrity-gate:
+  tests:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        # Remove this block if the app lives at the repo root.
+        working-directory: ventures/001-fba-2d-studio
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Restore verifier from main
+
+      # Protected tests, verifier and manifest always come from main,
+      # never from the PR. Any error fails the job (fail closed).
+      - name: Restore protected files from main
         run: |
-          git checkout origin/main -- ventures/001-fba-2d-studio/scripts/verify_protected_integrity.sh
-          git checkout origin/main -- ventures/001-fba-2d-studio/.protected_manifest.sha256
-      - name: Run Integrity Gate
-        run: (cd ventures/001-fba-2d-studio && bash scripts/verify_protected_integrity.sh)
+          set -euo pipefail
+          git fetch origin main
+          rm -rf tests/protected
+          git checkout origin/main -- tests/protected scripts/verify_protected_integrity.sh .protected_manifest.sha256
+
+      - name: Run integrity verifier (main's copy)
+        run: bash scripts/verify_protected_integrity.sh
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: ventures/001-fba-2d-studio/package-lock.json
+
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npx vitest run
