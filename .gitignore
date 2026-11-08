@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.astro/
+.wrangler/
+.env*
+*.key
+*.pem
+*.canary
+*judge*
+canary/
+secrets/
+archive/

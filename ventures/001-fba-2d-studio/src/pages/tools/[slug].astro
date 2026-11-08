@@ -1,0 +1,699 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import specs from '../../../data/deterministic_specs.json';
+
+export function getStaticPaths() {
+  return specs.map((spec) => ({
+    params: { slug: spec.slug },
+    props: { spec },
+  }));
+}
+
+const { spec } = Astro.props;
+---
+
+<Layout 
+  title={`${spec.title} — 4x6 Thermal Label & Margin Stamper Studio`}
+  description={`Instant client-side Amazon FBA 2D Box Content Barcode generator (${spec.barcode_format}) and 4x6 SKU margin-stamping studio for ${spec.marketplace}. Avoid the ${spec.fee_avoided}.`}
+>
+  <!-- SCHEMA-MARKUP: SOFTWAREAPPLICATION + FAQPAGE + VIDEOOBJECT -->
+  <script type="application/ld+json" is:inline set:html={JSON.stringify({
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": spec.title,
+        "operatingSystem": "WebBrowser",
+        "applicationCategory": "BusinessApplication",
+        "offers": {
+          "@type": "Offer",
+          "price": "29.00",
+          "priceCurrency": "USD"
+        },
+        "description": `Client-side Amazon FBA 2D Box Content Barcode generator (${spec.barcode_format}) and 4x6 SKU margin-stamping studio for ${spec.marketplace}. Avoid the ${spec.fee_avoided}.`
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "How does 2D barcode box content eliminate Amazon manual processing fees?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "By applying an ISO/IEC 15438 PDF417 or ISO/IEC 16022 Data Matrix 2D barcode containing the AMZN,PO payload to each carton, Amazon fulfillment centers scan box contents without manual unpacking, waiving the $0.15 per unit fee."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What format is required for Amazon FBA 2D barcodes?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Amazon specifies AMZN,PO:<ShipmentID>,FNSKU:<FNSKU>,QTY:<Qty> for single-SKU boxes, or concatenated multi-SKU strings for mixed cartons."
+            }
+          }
+        ]
+      },
+      {
+        "@type": "VideoObject",
+        "name": `${spec.title} — 10-Second Workflow Demo`,
+        "description": "Watch how to load shipment CSVs, eliminate the $0.15 fee, and batch print 300-DPI 4x6 PDF417 outer carton thermal labels.",
+        "thumbnailUrl": "https://fba-2d-barcode-studio.pages.dev/preview-thumbnail.png",
+        "uploadDate": "2026-11-07T00:00:00Z",
+        "contentUrl": "https://fba-2d-barcode-studio.pages.dev/videos/fba_2d_demo_short.mp4",
+        "embedUrl": "https://fba-2d-barcode-studio.pages.dev/videos/fba_2d_demo_short.mp4"
+      }
+    ]
+  })} />
+
+  <!-- TOP COMPLIANCE BAR -->
+  <div style="background: var(--surface); border-bottom: 1px solid var(--border); padding: 0.65rem 1.25rem;">
+    <div style="max-width: 1600px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+      <div style="display: flex; align-items: center; gap: 0.75rem;">
+        <span class="badge badge-emerald">AMAZON 2D SPEC: {spec.barcode_format}</span>
+        <span style="font-family: var(--font-mono); font-size: 0.78rem; font-weight: 600; color: #fff;">
+          {spec.marketplace} &bull; {spec.category}
+        </span>
+        <span style="color: var(--text-subtle); font-family: var(--font-mono); font-size: 0.72rem;">
+          Fee Waiver: {spec.fee_avoided}
+        </span>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 0.6rem; font-family: var(--font-mono); font-size: 0.72rem;">
+        <span style="color: var(--text-subtle);">STUDIO STATUS:</span>
+        <span id="tier-badge" class="badge">FREE TIER (5 BOXES / 10 SKUS MAX)</span>
+        <button id="btn-open-upgrade" class="btn btn-pro" style="font-size: 0.7rem; padding: 0.2rem 0.55rem;">
+          Unlock Unlimited ($29)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- WORKSPACE ROOT CONTAINER (1440x900 ABOVE-THE-FOLD SPLIT PANE) -->
+  <div style="max-width: 1600px; width: 100%; margin: 0 auto; padding: 1rem 1.25rem; flex: 1; display: flex; flex-direction: column;">
+    
+    <!-- CONTROLS & BATCH ACTION BAR -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem; flex-wrap: wrap; gap: 0.75rem;">
+      <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+        <button id="btn-load-sample" class="btn btn-secondary">
+          Load 15-Row Shipment Data
+        </button>
+        <button id="btn-load-50-gate" class="btn btn-secondary" style="color: var(--accent-amber); border-color: #78350f;">
+          Load 50-Box Gate Test
+        </button>
+        <label for="csv-upload" class="btn btn-secondary" style="cursor: pointer;">
+          &#8593; Ingest Shipment CSV
+        </label>
+        <input type="file" id="csv-upload" accept=".csv,.tsv,.txt" style="display: none;" />
+      </div>
+
+      <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+        <button id="btn-export-csv" class="btn btn-secondary">
+          Export Amazon 2D CSV
+        </button>
+        <button id="btn-download-pdf" class="btn btn-primary">
+          &#128424; Generate 4x6 Thermal PDF (jsPDF)
+        </button>
+      </div>
+    </div>
+
+    <!-- FREE GATE EXCEEDED WARNING BANNER -->
+    <div id="gate-banner" style="display: none; background: #1c1304; border: 1px solid var(--accent-amber); padding: 0.75rem 1rem; border-radius: 4px; margin-bottom: 0.85rem; font-family: var(--font-mono); font-size: 0.75rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+        <div style="color: var(--accent-amber);">
+          <strong>[FREE_CAP_ACTIVE]</strong> Ingested <span id="gate-total-count">50</span> box items. Free tier is locked to 5 boxes (10 SKUs max). Pro Tier ($29 one-time) unlocks unlimited batch box rendering + thermal PDF export.
+        </div>
+        <button class="btn btn-pro" style="font-size: 0.72rem; padding: 0.25rem 0.6rem;" onclick="openUpgradeDrawer()">
+          Unlock Pro Batch ($29) &rarr;
+        </button>
+      </div>
+    </div>
+
+    <!-- SPLIT-PANE STUDIO WORKSPACE -->
+    <style>
+      @media (max-width: 900px) {
+        #studio-grid {
+          grid-template-columns: 1fr !important;
+        }
+        #thermal-label-card {
+          width: 100% !important;
+          max-width: 320px !important;
+        }
+      }
+    </style>
+    <div style="display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(360px, 1fr); gap: 1rem; flex: 1; min-height: 580px;" id="studio-grid">
+      
+      <!-- LEFT PANE: HIGH-DENSITY EDITABLE SPREADSHEET GRID -->
+      <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 4px; display: flex; flex-direction: column; overflow: hidden;">
+        
+        <!-- PANE HEADER WITH METRICS -->
+        <div style="padding: 0.6rem 0.85rem; background: #0d0d10; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-family: var(--font-mono); font-size: 0.72rem;">
+          <div style="display: flex; gap: 1rem; align-items: center;">
+            <span style="font-weight: 600; color: #fff;">SHIPMENT CATALOG DATA GRID</span>
+            <span style="color: var(--text-subtle);">•</span>
+            <span style="color: var(--text-secondary);">FBA SHIPMENT: <strong id="val-shipment-id" style="color: #fff;">{spec.sample_shipment_id}</strong></span>
+          </div>
+          <div style="display: flex; gap: 0.75rem;">
+            <span>TOTAL BOXES: <strong id="metric-boxes" style="color: var(--accent-emerald);">0</strong></span>
+            <span>TOTAL UNITS: <strong id="metric-units" style="color: var(--accent-emerald);">0</strong></span>
+            <span>FEE SAVINGS: <strong id="metric-savings" style="color: var(--accent-emerald);">$0.00</strong></span>
+          </div>
+        </div>
+
+        <!-- SPREADSHEET TABLE CONTAINER -->
+        <div style="flex: 1; overflow: auto; max-height: 520px;" id="table-scroll-container">
+          <table style="width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 0.72rem; text-align: left;" id="catalog-table">
+            <thead>
+              <tr style="background: #151518; color: var(--text-secondary); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 10;">
+                <th style="padding: 0.5rem 0.6rem; border-right: 1px solid var(--border); width: 60px;">BOX #</th>
+                <th style="padding: 0.5rem 0.6rem; border-right: 1px solid var(--border); width: 110px;">FNSKU</th>
+                <th style="padding: 0.5rem 0.6rem; border-right: 1px solid var(--border);">PRODUCT TITLE</th>
+                <th style="padding: 0.5rem 0.6rem; border-right: 1px solid var(--border); width: 50px; text-align: right;">QTY</th>
+                <th style="padding: 0.5rem 0.6rem; border-right: 1px solid var(--border); width: 65px; text-align: right;">COST</th>
+                <th style="padding: 0.5rem 0.6rem; border-right: 1px solid var(--border); width: 65px; text-align: right;">PRICE</th>
+                <th style="padding: 0.5rem 0.6rem; border-right: 1px solid var(--border); width: 70px; text-align: right;">MARGIN</th>
+                <th style="padding: 0.5rem 0.6rem; width: 60px; text-align: center;">STATUS</th>
+              </tr>
+            </thead>
+            <tbody id="table-body">
+              <!-- Dynamically populated rows -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- BOTTOM STATUS BAR -->
+        <div style="padding: 0.4rem 0.85rem; background: #0d0d10; border-top: 1px solid var(--border); font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-subtle); display: flex; justify-content: space-between;">
+          <span>Barcode Payload Standard: <code>AMZN,PO:&lt;ShipmentID&gt;,FNSKU:&lt;FNSKU&gt;,QTY:&lt;Qty&gt;</code></span>
+          <span>Click any row to inspect &amp; render 4x6 thermal label</span>
+        </div>
+      </div>
+
+      <!-- RIGHT PANE: LIVE WYSIWYG 4x6 THERMAL LABEL & MARGIN INSPECTOR -->
+      <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 4px; display: flex; flex-direction: column; overflow: hidden;">
+        
+        <!-- PANE HEADER -->
+        <div style="padding: 0.6rem 0.85rem; background: #0d0d10; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-family: var(--font-mono); font-size: 0.72rem;">
+          <span style="font-weight: 600; color: #fff;">LIVE WYSIWYG 4x6 THERMAL LABEL (300 DPI)</span>
+          <span class="badge badge-emerald">CANVAS ACTIVE</span>
+        </div>
+
+        <!-- THERMAL LABEL PREVIEW CANVAS CONTAINER -->
+        <div style="flex: 1; padding: 1.25rem; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #050507; overflow-y: auto;">
+          
+          <!-- 4x6 INCH HIGH-CONTRAST THERMAL LABEL CONTAINER -->
+          <div id="thermal-label-card" style="width: 320px; height: 460px; background: #ffffff; color: #000000; border: 2px solid #ffffff; border-radius: 2px; padding: 0.85rem; display: flex; flex-direction: column; justify-content: space-between; font-family: var(--font-sans); box-shadow: 0 10px 25px rgba(0,0,0,0.5); position: relative;">
+            
+            <!-- LABEL HEADER -->
+            <div>
+              <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #000; padding-bottom: 0.35rem; margin-bottom: 0.4rem;">
+                <div>
+                  <div style="font-family: var(--font-mono); font-size: 9.5px; font-weight: 800; letter-spacing: -0.01em;">FBA 2D BOX CONTENT CARTON</div>
+                  <div style="font-family: var(--font-mono); font-size: 8px; color: #222;" id="lbl-shipment-po">SHIPMENT: {spec.sample_shipment_id}</div>
+                </div>
+                <div style="text-align: right;">
+                  <div style="font-family: var(--font-mono); font-size: 13px; font-weight: 900; line-height: 1;" id="lbl-box-num">BOX 1 OF 5</div>
+                  <div style="font-size: 7.5px; font-weight: 700; color: #111;">AMAZON FBA</div>
+                </div>
+              </div>
+
+              <!-- PRIMARY REAL 2D BARCODE CANVAS (PDF417 / DATA MATRIX - 600 DPI) -->
+              <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 0.25rem 0; min-height: 110px; background: #ffffff; border: 1px solid #111; padding: 4px;">
+                <canvas id="barcode-2d-canvas" style="max-width: 100%; height: 90px; image-rendering: pixelated;"></canvas>
+                <div style="font-family: var(--font-mono); font-size: 6.5px; color: #222; word-break: break-all; text-align: center; margin-top: 3px; max-height: 22px; overflow: hidden; line-height: 1.1;" id="lbl-2d-payload">
+                  AMZN,PO:{spec.sample_shipment_id},FNSKU:...
+                </div>
+              </div>
+            </div>
+
+            <!-- HUMAN-READABLE CARTON PACKING LIST (REPLACES 1D BARCODE & LEAKED COST DATA) -->
+            <div style="border-top: 2px solid #000; padding-top: 0.35rem; flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
+              <div>
+                <div style="display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 8px; font-weight: 800; border-bottom: 1px solid #000; padding-bottom: 2px; margin-bottom: 4px;">
+                  <span>CARTON CONTENT PACKING LIST</span>
+                  <span id="lbl-box-total-skus">3 SKUS</span>
+                </div>
+                <div id="lbl-packing-list-items" style="font-family: var(--font-mono); font-size: 7.5px; line-height: 1.35; max-height: 130px; overflow-y: auto;">
+                  <!-- Populated with all SKUs belonging to this box -->
+                </div>
+              </div>
+
+              <!-- CARTON VERIFICATION & FEE WAIVER FOOTER -->
+              <div>
+                <div style="display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 8.5px; font-weight: 800; border-top: 1px dashed #000; padding-top: 3px; margin-top: 4px;">
+                  <span>TOTAL CARTON UNITS:</span>
+                  <strong id="lbl-box-total-units">62 UNITS</strong>
+                </div>
+                <div style="background: #000; color: #fff; text-align: center; font-family: var(--font-mono); font-size: 8px; font-weight: 800; padding: 0.3rem 0.2rem; margin-top: 4px; letter-spacing: 0.02em;">
+                  FBA 2D INBOUND READY &bull; $0.15/UNIT FEE WAIVED
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- THERMAL SPECIFICATION DETAILS -->
+          <div style="margin-top: 0.85rem; font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-subtle); text-align: center; max-width: 340px;">
+            Dymo 4XL / Zebra / Rollo 4x6" (101.6x152.4mm) &bull; Native Vector PDF Output &bull; FBA Inbound Manual Fee $0.15 Waived
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE-OVER UPGRADE DRAWER (PRO UNLIMITED $29) -->
+  <div id="upgrade-drawer" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 100; align-items: center; justify-content: center; padding: 1rem;">
+    <div style="background: var(--surface); border: 1px solid var(--border-focus); border-radius: 6px; max-width: 440px; width: 100%; padding: 1.75rem; font-family: var(--font-sans);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: 0.75rem;">
+        <h3 style="font-size: 1rem; color: #fff; font-family: var(--font-mono); font-weight: 700;">Unlock Pro Unlimited Studio ($29)</h3>
+        <button onclick="closeUpgradeDrawer()" style="background: none; border: none; color: var(--text-subtle); cursor: pointer; font-size: 1.25rem;">&times;</button>
+      </div>
+
+      <p style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 1.25rem; line-height: 1.5;">
+        Avoid Amazon's $0.15/unit manual processing penalty across unlimited shipment boxes. Unlock batch 4x6 thermal PDF generation, multi-box splitting, and CSV exports.
+      </p>
+
+      <div style="display: flex; flex-direction: column; gap: 0.65rem; margin-bottom: 1.25rem;">
+        <button class="btn btn-primary" style="width: 100%; justify-content: center; font-size: 0.8rem; padding: 0.65rem;" onclick="mockStripePayment()">
+          Pay $29 Lifetime via Stripe &rarr;
+        </button>
+        <button class="btn btn-secondary" style="width: 100%; justify-content: center; font-size: 0.8rem; padding: 0.65rem;" onclick="mockLemonPayment()">
+          Pay $29 Lifetime via LemonSqueezy &rarr;
+        </button>
+      </div>
+
+      <div style="border-top: 1px solid var(--border); padding-top: 0.85rem;">
+        <div style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-subtle); margin-bottom: 0.4rem;">OR ENTER LICENSE KEY</div>
+        <div style="display: flex; gap: 0.5rem;">
+          <input type="text" id="input-license" placeholder="FBA-PRO-XXXX" style="flex: 1; padding: 0.4rem 0.6rem; background: #000; border: 1px solid var(--border); color: #fff; font-family: var(--font-mono); font-size: 0.75rem; border-radius: 3px;" />
+          <button class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.4rem 0.75rem;" onclick="activateLicenseKey()">Activate</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VITE-BUNDLED OPEN-SOURCE ENGINES (BWIP-JS, JSPDF, PAPAPARSE) -->
+  <script>
+    import bwipjs from 'bwip-js';
+    import { jsPDF } from 'jspdf';
+    import Papa from 'papaparse';
+
+    (window as any).bwipjs = bwipjs;
+    (window as any).jspdf = { jsPDF };
+    (window as any).Papa = Papa;
+    window.dispatchEvent(new CustomEvent('engines-ready'));
+  </script>
+
+  <script is:inline define:vars={{ spec }}>
+    let rowsData = [];
+    let selectedIndex = 0;
+    let isProTier = false;
+
+    // Check License Key
+    const activeKey = localStorage.getItem("fba_pro_license");
+    if (activeKey) {
+      isProTier = true;
+      document.getElementById("tier-badge").textContent = "PRO UNLIMITED (" + activeKey.slice(0, 10) + "...)";
+      document.getElementById("tier-badge").className = "badge badge-emerald";
+    }
+
+    // Modal controls
+    document.getElementById("btn-open-upgrade")?.addEventListener("click", openUpgradeDrawer);
+    function openUpgradeDrawer() { document.getElementById("upgrade-drawer").style.display = "flex"; }
+    function closeUpgradeDrawer() { document.getElementById("upgrade-drawer").style.display = "none"; }
+
+    function mockStripePayment() {
+      const key = "FBA-PRO-STRIPE-" + Math.random().toString(36).substring(2, 9).toUpperCase();
+      localStorage.setItem("fba_pro_license", key);
+      alert("[STRIPE CONFIRMED]\nLicense Provisioned: " + key);
+      closeUpgradeDrawer();
+      location.reload();
+    }
+
+    function mockLemonPayment() {
+      const key = "FBA-PRO-LEMON-" + Math.random().toString(36).substring(2, 9).toUpperCase();
+      localStorage.setItem("fba_pro_license", key);
+      alert("[LEMONSQUEEZY CONFIRMED]\nLicense Provisioned: " + key);
+      closeUpgradeDrawer();
+      location.reload();
+    }
+
+    function activateLicenseKey() {
+      const val = document.getElementById("input-license").value.trim();
+      if (val) {
+        localStorage.setItem("fba_pro_license", val);
+        alert("Activated: " + val);
+        closeUpgradeDrawer();
+        location.reload();
+      }
+    }
+
+    // Generate Initial 15-Row Sample Data
+    function buildSampleDataset(count) {
+      const out = [];
+      const titles = [
+        "Noise Cancelling Over-Ear ANC Headphones",
+        "MagSafe Fast Wireless Charger Stand 15W",
+        "Ergonomic Memory Foam Lumbar Support",
+        "Stainless Steel Insulated Travel Tumbler 32oz",
+        "High-Speed Braided USB-C Cable (2-Pack 6ft)",
+        "Ultra-Slim Multi-Device Bluetooth Keyboard",
+        "Adjustable Aluminum Laptop Stand Dock",
+        "True Wireless Sport Earbuds IPX7 Waterproof",
+        "Smart LED Light Strip 16.4ft WiFi Sync",
+        "Compact 65W GaN Fast Charger Foldable",
+        "Magnetic Phone Grip & Kickstand Ring",
+        "Precision Screwdriver Set 58-in-1 Magnetic",
+        "Blue Light Blocking Computer Glasses Unisex",
+        "Desk Pad Protector Waterproof Leather Mat",
+        "High-Definition 1080P Autofocus Webcam"
+      ];
+
+      for (let i = 1; i <= count; i++) {
+        const title = titles[(i - 1) % titles.length] + (i > 15 ? ` #${i}` : "");
+        const boxNum = Math.ceil(i / 3);
+        const qty = 10 + ((i * 7) % 35);
+        const cost = (8.50 + ((i * 3.75) % 25)).toFixed(2);
+        const price = (parseFloat(cost) * 2.85).toFixed(2);
+        const marginVal = (((price - cost) / price) * 100).toFixed(1);
+
+        out.push({
+          box: boxNum,
+          shipmentId: spec.sample_shipment_id,
+          fnsku: `X00${(10000000 + i * 837).toString(36).toUpperCase()}`,
+          sku: `SKU-${spec.category_slug.toUpperCase()}-${1000 + i}`,
+          title: title,
+          qty: qty,
+          cost: parseFloat(cost),
+          price: parseFloat(price),
+          margin: marginVal
+        });
+      }
+      return out;
+    }
+
+    // Ingest & Render Data
+    function loadDataset(items) {
+      rowsData = items;
+      const totalUnits = items.reduce((acc, r) => acc + r.qty, 0);
+      const uniqueBoxes = new Set(items.map(r => r.box)).size;
+
+      document.getElementById("metric-boxes").textContent = uniqueBoxes;
+      document.getElementById("metric-units").textContent = totalUnits;
+      document.getElementById("metric-savings").textContent = "$" + (totalUnits * 0.15).toFixed(2);
+
+      // Check Free Tier Gating
+      if (!isProTier && items.length > 10) {
+        document.getElementById("gate-banner").style.display = "block";
+        document.getElementById("gate-total-count").textContent = items.length;
+      } else {
+        document.getElementById("gate-banner").style.display = "none";
+      }
+
+      const tbody = document.getElementById("table-body");
+      tbody.innerHTML = "";
+
+      items.forEach((item, idx) => {
+        const tr = document.createElement("tr");
+        tr.style.cursor = "pointer";
+        tr.style.borderBottom = "1px solid var(--border)";
+        tr.style.background = idx === selectedIndex ? "#18181b" : "transparent";
+        tr.onclick = () => selectRow(idx);
+
+        tr.innerHTML = `
+          <td style="padding: 0.45rem 0.6rem; border-right: 1px solid var(--border); font-weight: 700; color: #fff;">BOX ${item.box}</td>
+          <td style="padding: 0.45rem 0.6rem; border-right: 1px solid var(--border);">${item.fnsku}</td>
+          <td style="padding: 0.45rem 0.6rem; border-right: 1px solid var(--border); max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #fff;">${item.title}</td>
+          <td style="padding: 0.45rem 0.6rem; border-right: 1px solid var(--border); text-align: right; font-weight: 600;">${item.qty}</td>
+          <td style="padding: 0.45rem 0.6rem; border-right: 1px solid var(--border); text-align: right;">$${item.cost.toFixed(2)}</td>
+          <td style="padding: 0.45rem 0.6rem; border-right: 1px solid var(--border); text-align: right; color: #fff;">$${item.price.toFixed(2)}</td>
+          <td style="padding: 0.45rem 0.6rem; border-right: 1px solid var(--border); text-align: right; color: var(--accent-emerald); font-weight: 700;">${item.margin}%</td>
+          <td style="padding: 0.45rem 0.6rem; text-align: center;"><span class="badge badge-emerald" style="font-size: 0.65rem;">VALID</span></td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      selectRow(0);
+    }
+
+    // Select Row and Render 4x6 WYSIWYG Label (Multi-SKU Concatenation + Carton Packing List)
+    function selectRow(index) {
+      if (!rowsData[index]) return;
+      selectedIndex = index;
+      const selectedItem = rowsData[index];
+      const targetBox = selectedItem.box;
+
+      // Update table selection styles: highlight all rows sharing this box
+      const trs = document.querySelectorAll("#table-body tr");
+      trs.forEach((tr, i) => {
+        tr.style.background = rowsData[i].box === targetBox ? "#1f1f23" : "transparent";
+      });
+
+      // Filter all SKUs in this box
+      const boxItems = rowsData.filter(r => r.box === targetBox);
+      const uniqueBoxes = Array.from(new Set(rowsData.map(r => r.box))).sort((a,b) => a - b);
+      const totalBoxes = uniqueBoxes.length;
+      const totalUnits = boxItems.reduce((acc, r) => acc + r.qty, 0);
+
+      // Update Header & Carton Packing List
+      document.getElementById("lbl-box-num").textContent = `BOX ${targetBox} OF ${totalBoxes}`;
+      document.getElementById("lbl-box-total-skus").textContent = `${boxItems.length} SKUS`;
+      document.getElementById("lbl-box-total-units").textContent = `${totalUnits} UNITS`;
+
+      // Render human-readable packing list items (no cost or sell price leaks)
+      const listContainer = document.getElementById("lbl-packing-list-items");
+      listContainer.innerHTML = boxItems.map(b => `
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f0f0f0; padding: 2px 0;">
+          <div style="max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+            <strong style="font-family: monospace;">${b.fnsku}</strong>: ${b.title}
+          </div>
+          <div style="font-weight: 800; font-family: monospace; padding-left: 6px;">
+            ${b.qty}x
+          </div>
+        </div>
+      `).join("");
+
+      // Build Official Multi-SKU Amazon 2D String
+      let payload2D = `AMZN,PO:${selectedItem.shipmentId}`;
+      boxItems.forEach(b => {
+        payload2D += `,FNSKU:${b.fnsku},QTY:${b.qty}`;
+        if (b.expirationDate) payload2D += `,EXP:${b.expirationDate}`;
+      });
+      document.getElementById("lbl-2d-payload").textContent = payload2D;
+
+      // Render Real Scannable 2D Barcode via bwip-js (PDF417 / Data Matrix at high density)
+      try {
+        const b2dType = spec.barcode_format === "Data Matrix" ? "datamatrix" : "pdf417";
+        bwipjs.toCanvas("barcode-2d-canvas", {
+          bcid: b2dType,
+          text: payload2D,
+          scale: 3,
+          columns: spec.barcode_format === "Data Matrix" ? undefined : 6,
+          includetext: false
+        });
+      } catch (err) {
+        console.warn("2D barcode render note:", err);
+      }
+    }
+
+    // Generate 4x6 Thermal PDF via jsPDF (Multi-SKU Carton Packing List, Zero Leaked Cost Data)
+    document.getElementById("btn-download-pdf")?.addEventListener("click", () => {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: [101.6, 152.4]
+      });
+
+      // Group by Box Number
+      const boxMap = new Map();
+      rowsData.forEach(r => {
+        if (!boxMap.has(r.box)) boxMap.set(r.box, []);
+        boxMap.get(r.box).push(r);
+      });
+
+      const boxKeys = Array.from(boxMap.keys()).sort((a,b) => a - b);
+      const exportBoxes = (!isProTier && boxKeys.length > 5) ? boxKeys.slice(0, 5) : boxKeys;
+
+      exportBoxes.forEach((boxNum, idx) => {
+        if (idx > 0) doc.addPage([101.6, 152.4], "portrait");
+        const items = boxMap.get(boxNum);
+        const totalBoxUnits = items.reduce((acc, it) => acc + it.qty, 0);
+        const shipmentId = items[0].shipmentId;
+
+        // Border & Header
+        doc.setLineWidth(0.6);
+        doc.rect(4, 4, 93.6, 144.4);
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(10.5);
+        doc.text("AMAZON FBA 2D BOX CONTENT CARTON", 8, 12);
+
+        doc.setFont("courier", "bold");
+        doc.setFontSize(8.5);
+        doc.text(`SHIPMENT ID: ${shipmentId}`, 8, 17);
+        doc.text(`BOX ${boxNum} OF ${boxKeys.length}`, 68, 17);
+
+        doc.line(8, 20, 93.6, 20);
+
+        // Build Multi-SKU 2D Payload
+        let boxPayload = `AMZN,PO:${shipmentId}`;
+        items.forEach(it => {
+          boxPayload += `,FNSKU:${it.fnsku},QTY:${it.qty}`;
+          if (it.expirationDate) boxPayload += `,EXP:${it.expirationDate}`;
+        });
+
+        // Render Real Scannable Barcode via temporary canvas
+        const tempCanvas = document.createElement("canvas");
+        try {
+          const b2dType = spec.barcode_format === "Data Matrix" ? "datamatrix" : "pdf417";
+          bwipjs.toCanvas(tempCanvas, {
+            bcid: b2dType,
+            text: boxPayload,
+            scale: 4,
+            columns: spec.barcode_format === "Data Matrix" ? undefined : 6,
+            includetext: false
+          });
+          const imgData = tempCanvas.toDataURL("image/png");
+          doc.addImage(imgData, "PNG", 12, 23, 77, 34);
+        } catch (e) {
+          console.warn(e);
+        }
+
+        doc.setFont("courier", "normal");
+        doc.setFontSize(5.5);
+        doc.text(doc.splitTextToSize(boxPayload, 85), 8, 60);
+
+        doc.line(8, 64, 93.6, 64);
+
+        // Carton Packing List Header (Human-Readable)
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(9);
+        doc.text("CARTON CONTENT PACKING LIST", 8, 69);
+        doc.text(`SKUS: ${items.length}`, 76, 69);
+
+        // Table Header
+        doc.line(8, 72, 93.6, 72);
+        doc.setFont("courier", "bold");
+        doc.setFontSize(7.5);
+        doc.text("FNSKU", 8, 76);
+        doc.text("ITEM TITLE / IDENTIFIER", 32, 76);
+        doc.text("QTY", 84, 76);
+        doc.line(8, 78, 93.6, 78);
+
+        // Table Rows (Human-readable packing list, zero cost/price leaks)
+        let yPos = 83;
+        doc.setFont("courier", "normal");
+        doc.setFontSize(7);
+        items.forEach((it, i) => {
+          if (yPos < 128) {
+            doc.text(it.fnsku, 8, yPos);
+            const titleSnippet = it.title.length > 32 ? it.title.substring(0, 30) + ".." : it.title;
+            doc.text(titleSnippet, 32, yPos);
+            doc.text(`${it.qty}x`, 85, yPos);
+            yPos += 5.5;
+          }
+        });
+
+        // Carton Units Summary
+        doc.line(8, 131, 93.6, 131);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8.5);
+        doc.text("TOTAL CARTON UNITS:", 8, 135.5);
+        doc.text(`${totalBoxUnits} UNITS`, 72, 135.5);
+
+        // Compliance Footer Stamp
+        doc.setFillColor(0, 0, 0);
+        doc.rect(8, 138, 85.6, 9, "F");
+        doc.setTextColor(255, 255, 255);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(7.5);
+        doc.text("AMAZON FBA 2D INBOUND READY • $0.15/UNIT FEE WAIVED", 11, 144);
+        doc.setTextColor(0, 0, 0);
+      });
+
+      doc.save(`${spec.slug}-4x6-carton-labels.pdf`);
+    });
+
+    // Export Amazon Box Content Flat File CSV
+    document.getElementById("btn-export-csv")?.addEventListener("click", () => {
+      const boxMap = new Map();
+      rowsData.forEach(r => {
+        if (!boxMap.has(r.box)) boxMap.set(r.box, []);
+        boxMap.get(r.box).push(r);
+      });
+
+      const csvRows = [
+        ["Shipment ID", "Box Number", "Total Box Units", "FNSKUs in Box", "Amazon 2D Concatenated String"]
+      ];
+
+      boxMap.forEach((items, boxNum) => {
+        const shipmentId = items[0].shipmentId;
+        const totalUnits = items.reduce((a, b) => a + b.qty, 0);
+        const fnskus = items.map(i => `${i.fnsku}(${i.qty})`).join("; ");
+        let payload2D = `AMZN,PO:${shipmentId}`;
+        items.forEach(i => {
+          payload2D += `,FNSKU:${i.fnsku},QTY:${i.qty}`;
+          if (i.expirationDate) payload2D += `,EXP:${i.expirationDate}`;
+        });
+        csvRows.push([
+          shipmentId,
+          boxNum,
+          totalUnits,
+          fnskus,
+          payload2D
+        ]);
+      });
+
+      const csvContent = Papa.unparse(csvRows);
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${spec.slug}-amazon-2d-box-manifest.csv`;
+      a.click();
+    });
+
+    // CSV File Upload Ingestion
+    document.getElementById("csv-upload")?.addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: (results) => {
+          const parsed = results.data.map((row, idx) => {
+            const cost = parseFloat(row.Cost || row.cost || "12.00") || 12.00;
+            const price = parseFloat(row.Price || row.price || "29.99") || 29.99;
+            const margin = (((price - cost) / price) * 100).toFixed(1);
+            return {
+              box: parseInt(row.Box || row.box || Math.ceil((idx + 1) / 3)),
+              shipmentId: row.ShipmentId || row.shipment_id || spec.sample_shipment_id,
+              fnsku: row.FNSKU || row.fnsku || `X00${(90000000 + idx * 431).toString(36).toUpperCase()}`,
+              sku: row.SKU || row.sku || `SKU-${1000 + idx}`,
+              title: row.Title || row.title || `Uploaded Catalog Product Item #${idx + 1}`,
+              qty: parseInt(row.Qty || row.qty || row.Quantity || "20"),
+              cost: cost,
+              price: price,
+              margin: margin
+            };
+          });
+          loadDataset(parsed);
+        }
+      });
+    });
+
+    // Event Listeners for Loaders
+    document.getElementById("btn-load-sample")?.addEventListener("click", () => {
+      loadDataset(buildSampleDataset(15));
+    });
+    document.getElementById("btn-load-50-gate")?.addEventListener("click", () => {
+      loadDataset(buildSampleDataset(50));
+    });
+
+    // Auto-init Above The Fold
+    window.addEventListener("DOMContentLoaded", () => {
+      loadDataset(buildSampleDataset(15));
+    });
+    window.addEventListener("engines-ready", () => {
+      loadDataset(buildSampleDataset(15));
+    });
+  </script>
+</Layout>

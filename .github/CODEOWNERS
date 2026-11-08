@@ -1,1 +1,6 @@
+# CODEOWNERS - Root Protected Paths Policy
 * @onurkaymakkvkteknik-gif
+/ventures/001-fba-2d-studio/tests/protected/ @onurkaymakkvkteknik-gif
+/ventures/001-fba-2d-studio/scripts/verify_protected_integrity.sh @onurkaymakkvkteknik-gif
+/ventures/001-fba-2d-studio/.protected_manifest.sha256 @onurkaymakkvkteknik-gif
+/.github/workflows/ @onurkaymakkvkteknik-gif
