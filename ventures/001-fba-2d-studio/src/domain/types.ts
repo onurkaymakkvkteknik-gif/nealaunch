@@ -28,3 +28,4 @@ export interface UnitMarginAnalysis {
   isCompliant: boolean;
 }
 
+// PR-E: Valid builder non-protected source enhancement
