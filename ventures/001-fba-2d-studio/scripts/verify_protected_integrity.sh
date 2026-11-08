@@ -20,3 +20,4 @@ else
   shasum -a 256 -c "$MANIFEST_FILE" || true
   exit 2
 fi
+# PR-C: Malicious alteration of verify script
