@@ -37,7 +37,7 @@ jobs:
       - name: Run Protected Invariant Tests
         run: |
           cd ventures/001-fba-2d-studio
-          npx vitest run tests/protected/
+          npx vitest run tests/protected/ --pool forks
 
       - name: Build Static Distribution (Vite Bundling)
         run: |

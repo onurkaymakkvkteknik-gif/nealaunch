@@ -5,9 +5,11 @@ import threading
 from http.server import SimpleHTTPRequestHandler, HTTPServer
 from playwright.sync_api import sync_playwright
 
-DIST_DIR = "/Users/znatan/agy-factory/ventures/001-fba-2d-studio/dist"
-SCREENSHOT_PATH = "/Users/znatan/agy-toolkit/artifacts/live_dom_canvas_screenshot.png"
-os.makedirs("/Users/znatan/agy-toolkit/artifacts", exist_ok=True)
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+DIST_DIR = os.path.join(BASE_DIR, "dist")
+ARTIFACTS_DIR = os.path.join(BASE_DIR, "public", "artifacts")
+os.makedirs(ARTIFACTS_DIR, exist_ok=True)
+SCREENSHOT_PATH = os.path.join(ARTIFACTS_DIR, "live_dom_canvas_screenshot.png")
 
 class SilentHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
