@@ -1,0 +1,16 @@
+name: CI
+on: [push, pull_request]
+
+jobs:
+  integrity-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Restore verifier from main
+        run: |
+          git checkout origin/main -- ventures/001-fba-2d-studio/scripts/verify_protected_integrity.sh
+          git checkout origin/main -- ventures/001-fba-2d-studio/.protected_manifest.sha256
+      - name: Run Integrity Gate
+        run: bash ventures/001-fba-2d-studio/scripts/verify_protected_integrity.sh
