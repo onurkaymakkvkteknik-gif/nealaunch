@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://fba-2d-barcode-studio.pages.dev/sitemap.xml
