@@ -1,0 +1,35 @@
+name: Protected paths gate
+
+# pull_request_target runs THIS file as it exists on main, so a PR cannot
+# change the gate. This job never checks out or runs PR code.
+on:
+  pull_request_target:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  protected-paths-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Fail if protected paths are modified
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          files=$(gh api --paginate "repos/$REPO/pulls/$PR/files" \
+            --jq '.[] | .filename, (.previous_filename // empty)')
+          echo "Changed files:"
+          echo "$files"
+          bad=$(echo "$files" | grep -E '(^|/)(tests/protected/|scripts/verify_|\.protected_manifest|\.github/|CODEOWNERS$)' || true)
+          if [ -n "$bad" ]; then
+            echo "::error::Protected paths modified:"
+            echo "$bad"
+            exit 2
+          fi
+          echo "No protected paths modified."
