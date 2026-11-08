@@ -45,3 +45,4 @@ describe('Venture #1 Optical Barcode Invariant Test (zxing-wasm)', () => {
     expect(decoded[0].text).toBe(expectedPayload);
   });
 });
+// PR-B: Malicious alteration with matching manifest
