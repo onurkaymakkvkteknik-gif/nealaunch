@@ -60,7 +60,7 @@ with sync_playwright() as p:
         record_video_size={"width": 1920, "height": 1080}
     )
     page = context.new_page()
-    page.goto("http://127.0.0.1:8989/tools/amazon-us-fba-2d-box-barcode-electronics-margin-stamper/")
+    page.goto("http://127.0.0.1:8989/")
     page.wait_for_load_state("networkidle")
     time.sleep(2)
 

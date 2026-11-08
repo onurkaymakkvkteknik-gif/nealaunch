@@ -30,7 +30,7 @@ print("[LIVE-DOM GATE] Local server listening on http://127.0.0.1:8991")
 with sync_playwright() as p:
     browser = p.chromium.launch(headless=True)
     page = browser.new_page(viewport={"width": 1440, "height": 900})
-    page.goto("http://127.0.0.1:8991/tools/amazon-us-fba-2d-box-barcode-electronics-margin-stamper/")
+    page.goto("http://127.0.0.1:8991/")
     page.wait_for_load_state("networkidle")
     time.sleep(2)
 
