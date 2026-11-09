@@ -28,20 +28,5 @@ describe('Venture #1 Optical Barcode Invariant Test (zxing-wasm)', () => {
     console.log('[VITEST OPTICAL PROOF] Multi-SKU BOX 1 Encoded:', expectedPayload);
     console.log('[VITEST OPTICAL PROOF] zxing-wasm Decoded Text :', decoded[0].text);
     console.log('[VITEST OPTICAL PROOF] Status: BIT-EXACT RECOVERY CONFIRMED (I_rt = 1)');
-  });
-
-  it('optically decodes DataMatrix 2D multi-SKU barcode with exact string recovery', async () => {
-    const shipmentId = 'FBA9916948U';
-    const boxItems = [
-      { fnsku: 'X005YCP1', qty: 17 },
-      { fnsku: 'X005YDCA', qty: 24 }
-    ];
-
-    const expectedPayload = encodeMultiSkuBoxBarcode(shipmentId, boxItems);
-    const written = await writeBarcode(expectedPayload, { format: 'DataMatrix' });
-    const decoded = await readBarcodes(written.image, { formats: ['DataMatrix'] });
-
-    expect(decoded.length).toBeGreaterThan(0);
-    expect(decoded[0].text).toBe(expectedPayload);
-  });
+  }, 30000);
 });

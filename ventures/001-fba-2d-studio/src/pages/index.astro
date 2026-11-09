@@ -94,10 +94,7 @@ import Layout from '../layouts/Layout.astro';
           &#8593; Ingest Shipment CSV
         </label>
         <input type="file" id="csv-upload" accept=".csv,.tsv,.txt" style="display: none;" />
-        <select id="format-select" style="background: var(--surface); color: var(--text-primary); border: 1px solid var(--border); font-family: var(--font-mono); font-size: 0.75rem; padding: 0.45rem 0.6rem; border-radius: 4px;">
-          <option value="pdf417">Symbology: PDF417 (Recommended)</option>
-          <option value="datamatrix">Symbology: Data Matrix</option>
-        </select>
+        <span class="badge badge-emerald" style="font-size: 0.75rem; padding: 0.45rem 0.6rem;">Symbology: PDF417 (Amazon Recommended)</span>
       </div>
 
       <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
@@ -355,13 +352,7 @@ import Layout from '../layouts/Layout.astro';
       }
     });
 
-    // Format selector
-    document.getElementById("format-select")?.addEventListener("change", (e) => {
-      selectedFormat = e.target.value;
-      const label = document.getElementById("current-format-label");
-      if (label) label.textContent = selectedFormat === "datamatrix" ? "DATA MATRIX" : "PDF417";
-      selectRow(selectedIndex);
-    });
+    // Format: PDF417 exclusively (Amazon recommended ISO/IEC 15438)
 
     // Generate Initial 15-Row Sample Data
     function buildSampleDataset(count) {
